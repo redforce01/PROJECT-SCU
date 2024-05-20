@@ -1,87 +1,188 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.InputSystem.XR;
 
 namespace SCU
 {
     public class PlayerController : MonoBehaviour
     {
-        [Header("Bullet Setting")]
-        public GameObject bulletPrefab;
-        public Transform bulletSpawnPoint;
-        public float bulletSpeed = 10.0f;
-        public float fireRate = 0.1f; // 사격 속도를 의미
-        private float fireTime = 0.0f; // 내가 다음 사격을 할 수 있는 시간을 의미
-
-
-        [Header("Character Setting")]
-        public float moveSpeed = 5.0f;
-
-        [Header("Camera Setting")]
-        public Transform cameraPivot;
-        public Cinemachine.AxisState xAxis;
-        public Cinemachine.AxisState yAxis;
-
-        private void LateUpdate()
+        public int AttackComboCount
         {
-            // Camera Pivot Transform의 Euler Angle을 AxisState 값을 이용해서 회전을 시켰음
-            cameraPivot.eulerAngles = new Vector3(yAxis.Value, cameraPivot.eulerAngles.y, cameraPivot.eulerAngles.z);
+            set => attackComboCount = value;
+        }
 
-            // player controller component 가 붙어있는 transform (player) 객체의 rotation도 동일한 방향을 쳐다보도록 동기화 했음
-            transform.eulerAngles = new Vector3(transform.eulerAngles.x, xAxis.Value, transform.eulerAngles.z);
+        public float moveSpeed = 3.0f;
+        public float sprintSpeed = 5.0f;
+        public float speedChangeRate = 10.0f;
+
+        public float cameraHorizontalSpeed = 2.0f;
+        public float cameraVerticalSpeed = 2.0f;
+
+        [Range(0.0f, 0.3f)] public float rotationSmoothTime = 0.12f;
+
+        public float topClamp = 70.0f;
+        public float bottomClamp = -30.0f;
+        public GameObject cinemachineCameraTarget;
+        public float cameraAngleOverride = 0.0f;
+
+        private Animator animator;
+        private Camera mainCamera;
+        private CharacterController controller;
+
+        private bool isSprint = false;
+        private Vector2 move;
+        private float speed;
+        private float animationBlend;
+        private float targetRotation = 0.0f;
+        private float rotationVelocity;
+        private float verticalVelocity;
+
+        private Vector2 look;
+        private const float _threshold = 0.01f;
+        private float cinemachineTargetYaw;
+        private float cinemachineTargetPitch;
+
+
+        private int attackComboCount = 0;
+
+        private void Awake()
+        {
+            animator = GetComponentInChildren<Animator>();
+            controller = GetComponent<CharacterController>();
+            mainCamera = Camera.main;
+        }
+
+        private void Start()
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
 
         private void Update()
         {
-            if (Input.GetKey(KeyCode.Mouse0)) // Mouse Left Button
+            float horizontal = Input.GetAxis("Horizontal");
+            float vertical = Input.GetAxis("Vertical");
+
+            move = new Vector2(horizontal, vertical);
+
+            float hMouse = Input.GetAxis("Mouse X");
+            float vMouse = Input.GetAxis("Mouse Y") * -1;
+            look = new Vector2(hMouse, vMouse);
+            
+            isSprint = Input.GetKey(KeyCode.LeftShift);
+
+            if (Input.GetKeyDown(KeyCode.Mouse0))
             {
-                // Fire Bullet
-                if (Time.time > fireTime) // Time.time => Unity가 Play 되고 나서부터 경과된 시간을 의미
+                // Attack !
+                if (attackComboCount == 0)
                 {
-                    var bullet = Instantiate(bulletPrefab);
-                    bullet.transform.position = bulletSpawnPoint.position;
-
-                    var bulletRigid = bullet.GetComponent<Rigidbody>();
-                    bulletRigid.AddForce(bulletSpawnPoint.forward * bulletSpeed, ForceMode.Impulse);
-
-                    fireTime = Time.time + fireRate;
+                    animator.SetTrigger("Trigger_Attack");
+                    attackComboCount++;
+                }
+                else
+                {
+                    attackComboCount++;
+                    animator.SetInteger("ComboCount", attackComboCount);
                 }
             }
 
-            xAxis.Update(Time.deltaTime);
-            yAxis.Update(Time.deltaTime);
+            Move();
 
-            Vector3 dirForward = Camera.main.transform.forward;
-            Vector3 dirRight = Camera.main.transform.right;
-            dirForward.y = 0;
-            dirRight.y = 0;
+            animator.SetFloat("Speed", animationBlend);
+        }
 
+        private void LateUpdate()
+        {
+            CameraRotation();
+        }
 
-            Vector2 input = Vector2.zero;
-
-            if (Input.GetKey(KeyCode.W))
+        private void CameraRotation()
+        {
+            // if there is an input and camera position is not fixed
+            if (look.sqrMagnitude >= _threshold)
             {
-                input.y += 1;
+                //Don't multiply mouse input by Time.deltaTime;
+                float deltaTimeMultiplier = 1.0f;
+
+                cinemachineTargetYaw += look.x * deltaTimeMultiplier * cameraHorizontalSpeed;
+                cinemachineTargetPitch += look.y * deltaTimeMultiplier * cameraVerticalSpeed;
             }
 
-            if (Input.GetKey(KeyCode.S))
+            // clamp our rotations so our values are limited 360 degrees
+            cinemachineTargetYaw = ClampAngle(cinemachineTargetYaw, float.MinValue, float.MaxValue);
+            cinemachineTargetPitch = ClampAngle(cinemachineTargetPitch, bottomClamp, topClamp);
+
+            // Cinemachine will follow this target
+            cinemachineCameraTarget.transform.rotation = Quaternion.Euler(cinemachineTargetPitch + cameraAngleOverride,
+                cinemachineTargetYaw, 0.0f);
+        }
+
+        private void Move()
+        {
+            // set target speed based on move speed, sprint speed and if sprint is pressed
+            float targetSpeed = isSprint ? sprintSpeed : moveSpeed;
+
+            // a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
+
+            // note: Vector2's == operator uses approximation so is not floating point error prone, and is cheaper than magnitude
+            // if there is no input, set the target speed to 0
+            if (move == Vector2.zero) targetSpeed = 0.0f;
+
+            // a reference to the players current horizontal velocity
+            float currentHorizontalSpeed = new Vector3(controller.velocity.x, 0.0f, controller.velocity.z).magnitude;
+
+            float speedOffset = 0.1f;
+            float inputMagnitude = move.magnitude;
+
+            // accelerate or decelerate to target speed
+            if (currentHorizontalSpeed < targetSpeed - speedOffset ||
+                currentHorizontalSpeed > targetSpeed + speedOffset)
             {
-                input.y -= 1;
+                // creates curved result rather than a linear one giving a more organic speed change
+                // note T in Lerp is clamped, so we don't need to clamp our speed
+                speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * speedChangeRate);
+
+                // round speed to 3 decimal places
+                speed = Mathf.Round(speed * 1000f) / 1000f;
+            }
+            else
+            {
+                speed = targetSpeed;
             }
 
-            if (Input.GetKey(KeyCode.A))
+            animationBlend = Mathf.Lerp(animationBlend, targetSpeed, Time.deltaTime * speedChangeRate);
+            if (animationBlend < 0.01f) animationBlend = 0f;
+
+            // normalise input direction
+            Vector3 inputDirection = new Vector3(move.x, 0.0f, move.y).normalized;
+
+            // note: Vector2's != operator uses approximation so is not floating point error prone, and is cheaper than magnitude
+            // if there is a move input rotate player when the player is moving
+            if (move != Vector2.zero)
             {
-                input.x -= 1;
+                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
+                                  mainCamera.transform.eulerAngles.y;
+                float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity,
+                    rotationSmoothTime);
+
+                // rotate to face input direction relative to camera position
+                transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
             }
 
-            if (Input.GetKey(KeyCode.D))
-            {
-                input.x += 1;
-            }
+            Vector3 targetDirection = Quaternion.Euler(0.0f, targetRotation, 0.0f) * Vector3.forward;
 
-            Vector3 vecMove = dirForward * input.y + dirRight * input.x;
-            transform.position += vecMove * moveSpeed * Time.deltaTime;
+            // move the player
+            controller.Move(targetDirection.normalized * (speed * Time.deltaTime) +
+                             new Vector3(0.0f, verticalVelocity, 0.0f) * Time.deltaTime);
+        }
+
+        private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
+        {
+            if (lfAngle < -360f) lfAngle += 360f;
+            if (lfAngle > 360f) lfAngle -= 360f;
+            return Mathf.Clamp(lfAngle, lfMin, lfMax);
         }
     }
 }
+
