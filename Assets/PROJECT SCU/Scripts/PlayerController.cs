@@ -12,6 +12,11 @@ namespace SCU
             set => attackComboCount = value;
         }
 
+        public bool IsEnableMovement
+        {
+            set => isEnableMovement = value;
+        }
+
         public float moveSpeed = 3.0f;
         public float sprintSpeed = 5.0f;
         public float speedChangeRate = 10.0f;
@@ -45,6 +50,9 @@ namespace SCU
 
 
         private int attackComboCount = 0;
+        private bool isEnableMovement = true;
+
+        private bool isStrafe = false;
 
         private void Awake()
         {
@@ -71,6 +79,13 @@ namespace SCU
             look = new Vector2(hMouse, vMouse);
             
             isSprint = Input.GetKey(KeyCode.LeftShift);
+            isStrafe = Input.GetKey(KeyCode.Mouse1); // Mouse Right Button
+            if (isStrafe)
+            {
+                Vector3 cameraForward = Camera.main.transform.forward.normalized;
+                cameraForward.y = 0;
+                transform.forward = cameraForward;
+            }
 
             if (Input.GetKeyDown(KeyCode.Mouse0))
             {
@@ -90,6 +105,9 @@ namespace SCU
             Move();
 
             animator.SetFloat("Speed", animationBlend);
+            animator.SetFloat("Horizontal", move.x);
+            animator.SetFloat("Vertical", move.y);
+            animator.SetFloat("Strafe", isStrafe ? 1 : 0);
         }
 
         private void LateUpdate()
@@ -120,6 +138,9 @@ namespace SCU
 
         private void Move()
         {
+            if (!isEnableMovement)
+                return;
+
             // set target speed based on move speed, sprint speed and if sprint is pressed
             float targetSpeed = isSprint ? sprintSpeed : moveSpeed;
 
@@ -161,13 +182,16 @@ namespace SCU
             // if there is a move input rotate player when the player is moving
             if (move != Vector2.zero)
             {
-                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
-                                  mainCamera.transform.eulerAngles.y;
+                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + 
+                    mainCamera.transform.eulerAngles.y;
                 float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity,
                     rotationSmoothTime);
 
-                // rotate to face input direction relative to camera position
-                transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                if (!isStrafe)
+                {
+                    // rotate to face input direction relative to camera position
+                    transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                }
             }
 
             Vector3 targetDirection = Quaternion.Euler(0.0f, targetRotation, 0.0f) * Vector3.forward;
