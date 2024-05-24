@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,6 +27,10 @@ namespace SCU
 
         [Range(0.0f, 0.3f)] public float rotationSmoothTime = 0.12f;
 
+
+        public AnimationCurve slidingCurve;
+
+
         public float topClamp = 70.0f;
         public float bottomClamp = -30.0f;
         public GameObject cinemachineCameraTarget;
@@ -34,6 +39,7 @@ namespace SCU
         private Animator animator;
         private Camera mainCamera;
         private CharacterController controller;
+        private InteractionSensor interactionSensor;
 
         private bool isSprint = false;
         private Vector2 move;
@@ -48,10 +54,8 @@ namespace SCU
         private float cinemachineTargetYaw;
         private float cinemachineTargetPitch;
 
-
         private int attackComboCount = 0;
         private bool isEnableMovement = true;
-
         private bool isStrafe = false;
 
         private void Awake()
@@ -59,6 +63,7 @@ namespace SCU
             animator = GetComponentInChildren<Animator>();
             controller = GetComponent<CharacterController>();
             mainCamera = Camera.main;
+            interactionSensor = GetComponentInChildren<InteractionSensor>();
         }
 
         private void Start()
@@ -67,12 +72,52 @@ namespace SCU
             Cursor.visible = false;
         }
 
+        private void OnEnable()
+        {
+            interactionSensor.OnDetected += OnDetectedInteraction;
+            interactionSensor.OnLost += OnLostInteraction;
+        }
+
+        private void OnDetectedInteraction(IInteractable interactable)
+        {
+            InteractionUI.Instance.AddInteractionData(interactable);
+        }
+
+        private void OnLostInteraction(IInteractable interactable)
+        {
+            InteractionUI.Instance.RemoveInteractionData(interactable);
+        }
+
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                InteractionUI.Instance.DoInteract();
+            }
+
+            if (Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                InteractionUI.Instance.SelectNext();
+            }
+
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                InteractionUI.Instance.SelectPrev();
+            }
+
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                animator.SetTrigger("Trigger_Slide");
+            }
+
             float horizontal = Input.GetAxis("Horizontal");
             float vertical = Input.GetAxis("Vertical");
-
             move = new Vector2(horizontal, vertical);
+            
+            //if (interactionSensor.HasInteractable)
+            //{
+            //    move = Vector2.zero;
+            //}
 
             float hMouse = Input.GetAxis("Mouse X");
             float vMouse = Input.GetAxis("Mouse Y") * -1;

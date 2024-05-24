@@ -22,9 +22,16 @@ namespace SCU
             set => selection.SetActive(value);
         }
 
+        public IInteractable InteractionData
+        {
+            set => interactionData = value;
+            get => interactionData;
+        }
+
         public GameObject selection;
         public TMPro.TextMeshProUGUI text;
-        
+
+        private IInteractable interactionData;
         private string key;
     }
 }
