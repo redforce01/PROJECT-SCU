@@ -8,29 +8,33 @@ namespace SCU
 {
     public class PlayerController : MonoBehaviour
     {
-        public int AttackComboCount
-        {
-            set => attackComboCount = value;
-        }
-
         public bool IsEnableMovement
         {
             set => isEnableMovement = value;
         }
 
+        [Header("Character Setting")]
         public float moveSpeed = 3.0f;
         public float sprintSpeed = 5.0f;
         public float speedChangeRate = 10.0f;
 
+        [Header("Camera Setting")]
         public float cameraHorizontalSpeed = 2.0f;
         public float cameraVerticalSpeed = 2.0f;
 
         [Range(0.0f, 0.3f)] public float rotationSmoothTime = 0.12f;
 
-
+        [Header("Sliding Setting")]
         public AnimationCurve slidingCurve;
 
+        [Header("Weapon Holder")]
+        public GameObject weaponHolder;
 
+        [Header("Weapon FOV")]
+        public float defaultFOV;
+        public float aimFOV;
+
+        [Header("Camera Clamping")]
         public float topClamp = 70.0f;
         public float bottomClamp = -30.0f;
         public GameObject cinemachineCameraTarget;
@@ -40,6 +44,7 @@ namespace SCU
         private Camera mainCamera;
         private CharacterController controller;
         private InteractionSensor interactionSensor;
+        private Weapon currentWeapon;
 
         private bool isSprint = false;
         private Vector2 move;
@@ -54,7 +59,6 @@ namespace SCU
         private float cinemachineTargetYaw;
         private float cinemachineTargetPitch;
 
-        private int attackComboCount = 0;
         private bool isEnableMovement = true;
         private bool isStrafe = false;
 
@@ -64,6 +68,9 @@ namespace SCU
             controller = GetComponent<CharacterController>();
             mainCamera = Camera.main;
             interactionSensor = GetComponentInChildren<InteractionSensor>();
+
+            var weaponGameObject = TransformUtility.FindGameObjectWithTag(weaponHolder, "Weapon");
+            currentWeapon = weaponGameObject.GetComponent<Weapon>();
         }
 
         private void Start()
@@ -113,7 +120,7 @@ namespace SCU
             float horizontal = Input.GetAxis("Horizontal");
             float vertical = Input.GetAxis("Vertical");
             move = new Vector2(horizontal, vertical);
-            
+
             //if (interactionSensor.HasInteractable)
             //{
             //    move = Vector2.zero;
@@ -122,7 +129,7 @@ namespace SCU
             float hMouse = Input.GetAxis("Mouse X");
             float vMouse = Input.GetAxis("Mouse Y") * -1;
             look = new Vector2(hMouse, vMouse);
-            
+
             isSprint = Input.GetKey(KeyCode.LeftShift);
             isStrafe = Input.GetKey(KeyCode.Mouse1); // Mouse Right Button
             if (isStrafe)
@@ -132,19 +139,25 @@ namespace SCU
                 transform.forward = cameraForward;
             }
 
-            if (Input.GetKeyDown(KeyCode.Mouse0))
+            if (Input.GetKey(KeyCode.Mouse0)) // Mouse Left Button
             {
-                // Attack !
-                if (attackComboCount == 0)
-                {
-                    animator.SetTrigger("Trigger_Attack");
-                    attackComboCount++;
-                }
-                else
-                {
-                    attackComboCount++;
-                    animator.SetInteger("ComboCount", attackComboCount);
-                }
+                currentWeapon?.Shoot();
+
+                var cameraForward = Camera.main.transform.forward.normalized;
+                cameraForward.y = 0;
+                transform.forward = cameraForward;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Mouse1)) // Mouse Right Button Down
+            {
+                // Zoom In
+                CameraSystem.Instance.TargetFOV = aimFOV;
+            }
+
+            if (Input.GetKeyUp(KeyCode.Mouse1)) // Mouse Right Button Up
+            {
+                // Zoom Out
+                CameraSystem.Instance.TargetFOV = defaultFOV;
             }
 
             Move();
@@ -227,7 +240,7 @@ namespace SCU
             // if there is a move input rotate player when the player is moving
             if (move != Vector2.zero)
             {
-                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + 
+                targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                     mainCamera.transform.eulerAngles.y;
                 float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetRotation, ref rotationVelocity,
                     rotationSmoothTime);

@@ -8,17 +8,12 @@ namespace SCU
     {
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            var controller = animator.transform.root.GetComponent<PlayerController>();
-            controller.AttackComboCount = 0;
-            animator.SetInteger("ComboCount", 0);
 
-            controller.IsEnableMovement = true;
         }
 
         public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            var controller = animator.transform.root.GetComponent<PlayerController>();
-            controller.IsEnableMovement = false;
+
         }
     }
 }
