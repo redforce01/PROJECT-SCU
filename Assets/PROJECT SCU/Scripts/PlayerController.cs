@@ -2,12 +2,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem.XR;
+using UnityEngine.Animations.Rigging;
 
 namespace SCU
 {
     public class PlayerController : MonoBehaviour
     {
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(aimTarget.position, 0.1f);
+        }
+
+
         public bool IsEnableMovement
         {
             set => isEnableMovement = value;
@@ -39,6 +46,15 @@ namespace SCU
         public float bottomClamp = -30.0f;
         public GameObject cinemachineCameraTarget;
         public float cameraAngleOverride = 0.0f;
+
+
+        [Header("Animation Rigging")]
+        public Transform aimTarget;
+        public LayerMask aimingLayer;
+        public UnityEngine.Animations.Rigging.Rig aimingRig;
+
+        public float aimingIKBlendCurrent;
+        public float aimingIKBlendTarget;
 
         private Animator animator;
         private Camera mainCamera;
@@ -131,6 +147,15 @@ namespace SCU
             look = new Vector2(hMouse, vMouse);
 
             isSprint = Input.GetKey(KeyCode.LeftShift);
+            if (isSprint)
+            {
+                animator.SetFloat("MotionSpeed", 1.25f);
+            }
+            else
+            {
+                animator.SetFloat("MotionSpeed", 1f);
+            }
+
             isStrafe = Input.GetKey(KeyCode.Mouse1); // Mouse Right Button
             if (isStrafe)
             {
@@ -152,13 +177,18 @@ namespace SCU
             {
                 // Zoom In
                 CameraSystem.Instance.TargetFOV = aimFOV;
+                aimingIKBlendTarget = 1f;
             }
 
             if (Input.GetKeyUp(KeyCode.Mouse1)) // Mouse Right Button Up
             {
                 // Zoom Out
                 CameraSystem.Instance.TargetFOV = defaultFOV;
+                aimingIKBlendTarget = 0f;
             }
+
+            aimingIKBlendCurrent = Mathf.Lerp(aimingIKBlendCurrent, aimingIKBlendTarget, Time.deltaTime * 10f);
+            aimingRig.weight = aimingIKBlendCurrent;
 
             Move();
 
@@ -166,6 +196,25 @@ namespace SCU
             animator.SetFloat("Horizontal", move.x);
             animator.SetFloat("Vertical", move.y);
             animator.SetFloat("Strafe", isStrafe ? 1 : 0);
+
+            // 카메라의 ViewportPointToRay를 이용하여 화면 중앙을 바라보는 Ray를 생성
+            Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+            // Raycast가 실패하면 카메라의 정면으로 1000m 떨어진 지점을 설정
+            // Raycast를 이용하여 화면 중앙을 바라보는 Ray와 충돌된 대상의 정보를 저장
+            Vector3 aimingTargetPosition = Camera.main.transform.position + Camera.main.transform.forward * 1000f;
+
+            // Raycast가 성공하면 aimingTargetPosition을 Raycast가 성공한 지점으로 설정
+            if (Physics.Raycast(ray, out RaycastHit hitInfo, 1000f, aimingLayer))
+            {
+                if (hitInfo.transform.root != transform)
+                {
+                    aimingTargetPosition = hitInfo.point;
+                }
+            }
+
+            // aimingTargetPosition을 aimTarget의 위치로 설정
+            aimTarget.position = aimingTargetPosition;
         }
 
         private void LateUpdate()
