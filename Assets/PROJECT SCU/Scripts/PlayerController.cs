@@ -61,6 +61,7 @@ namespace SCU
         private CharacterController controller;
         private InteractionSensor interactionSensor;
         private Weapon currentWeapon;
+        private AnimationEventListener animationEventListener;
 
         private bool isSprint = false;
         private Vector2 move;
@@ -77,6 +78,7 @@ namespace SCU
 
         private bool isEnableMovement = true;
         private bool isStrafe = false;
+        private bool isReloading = false; // Reload 중 인지 여부
 
         private void Awake()
         {
@@ -84,6 +86,8 @@ namespace SCU
             controller = GetComponent<CharacterController>();
             mainCamera = Camera.main;
             interactionSensor = GetComponentInChildren<InteractionSensor>();
+            animationEventListener = GetComponentInChildren<AnimationEventListener>();
+            animationEventListener.OnTakenAnimationEvent += OnTakenAnimationEvent;
 
             var weaponGameObject = TransformUtility.FindGameObjectWithTag(weaponHolder, "Weapon");
             currentWeapon = weaponGameObject.GetComponent<Weapon>();
@@ -177,7 +181,7 @@ namespace SCU
             {
                 // Zoom In
                 CameraSystem.Instance.TargetFOV = aimFOV;
-                aimingIKBlendTarget = 1f;
+                aimingIKBlendTarget = isReloading ? 0f : 1f;
             }
 
             if (Input.GetKeyUp(KeyCode.Mouse1)) // Mouse Right Button Up
@@ -185,6 +189,14 @@ namespace SCU
                 // Zoom Out
                 CameraSystem.Instance.TargetFOV = defaultFOV;
                 aimingIKBlendTarget = 0f;
+            }
+                        
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                // Reload
+                animator.SetLayerWeight(1, 1f);
+                animator.SetTrigger("Trigger_Reload");
+                isReloading = true;
             }
 
             aimingIKBlendCurrent = Mathf.Lerp(aimingIKBlendCurrent, aimingIKBlendTarget, Time.deltaTime * 10f);
@@ -313,6 +325,15 @@ namespace SCU
             if (lfAngle < -360f) lfAngle += 360f;
             if (lfAngle > 360f) lfAngle -= 360f;
             return Mathf.Clamp(lfAngle, lfMin, lfMax);
+        }
+
+        public void OnTakenAnimationEvent(string eventName)
+        {
+            if (eventName.Equals("Reload"))
+            {
+                isReloading = false;
+                animator.SetLayerWeight(1, 0f);
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Playables;
 
 namespace SCU
 {
@@ -10,14 +11,31 @@ namespace SCU
         public Vector3 closeRotation;
 
         public bool isOpen = false;
+        public PlayableDirector cinemaDirector;
+        public List<GameObject> OnActiveGameObjectsWhenOpen;
 
         public string Key => "Door." + gameObject.GetHashCode();
         public string Message => isOpen ? "Close" : "Open";
 
+        private bool isFirstInteract = true;
+
+        void Start()
+        {
+            cinemaDirector.stopped += (PlayableDirector controller) => 
+            {
+                controller.gameObject.SetActive(false);
+            };
+        }
 
         public void Interact()
         {
             isOpen = !isOpen;
+
+            if (isFirstInteract)
+            {
+                isFirstInteract = false;
+                OnActiveGameObjectsWhenOpen.ForEach(go => go.SetActive(true));
+            }
         }
 
         private void Update()
