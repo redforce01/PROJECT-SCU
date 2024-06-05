@@ -9,6 +9,10 @@ namespace SCU
         public static CameraSystem Instance { get; private set; } = null;
 
         // public bool IsTPSMode { get {return isTPSMode;} }
+
+        /// <summary>
+        /// 현재 CameraSystem이 TPS Mode로 작동하고 있는지 여부 값
+        /// </summary>
         public bool IsTPSMode => isTPSMode;
         public float TargetFOV { get; set; } = 60.0f;
 

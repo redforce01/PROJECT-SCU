@@ -39,6 +39,11 @@ namespace SCU
 
         public void Initialize()
         {
+            GameObject goUIManager = new GameObject("SCU.UIManager");
+            UIManager uiManager = goUIManager.AddComponent<UIManager>();
+            uiManager.Initialize();
+            DontDestroyOnLoad(goUIManager);
+
             ChangeScene(SceneType.Title);
         }
 
@@ -60,6 +65,9 @@ namespace SCU
         private IEnumerator ChangeSceneAsync<T>(SceneType sceneType) where T : SceneBase
         {
             // To do : Show Loading UI
+            var loadingUI = UIManager.Show<LoadingUI>(UIList.LoadingUI);
+            loadingUI.LoadingProgress = 0f;
+            yield return null;
 
             // if Current Scene is not null, call OnEndScene and destroy it
             if (currentScene != null)
@@ -68,9 +76,15 @@ namespace SCU
                 Destroy(currentScene.gameObject);
             }
 
+            loadingUI.LoadingProgress = 0.2f;
+            yield return null;
+
             // Load Empty Scene 
             var async = SceneManager.LoadSceneAsync(SceneType.Empty.ToString(), LoadSceneMode.Single);
             yield return new WaitUntil(() => async.isDone);
+
+            loadingUI.LoadingProgress = 0.7f;
+            yield return null;
 
             // Create Scene GameObject and add Scene Component
             GameObject sceneGo = new GameObject(typeof(T).Name);
@@ -80,7 +94,12 @@ namespace SCU
             // Load Scene
             yield return StartCoroutine(currentScene.OnStartScene());
 
+            loadingUI.LoadingProgress = 1f;
+
+            yield return new WaitForSeconds(1f);
+
             // To do : Hide Loading UI
+            UIManager.Hide<LoadingUI>(UIList.LoadingUI);
         }
     }
 }

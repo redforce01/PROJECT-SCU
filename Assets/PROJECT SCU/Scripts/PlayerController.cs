@@ -202,6 +202,18 @@ namespace SCU
             aimingIKBlendCurrent = Mathf.Lerp(aimingIKBlendCurrent, aimingIKBlendTarget, Time.deltaTime * 10f);
             aimingRig.weight = aimingIKBlendCurrent;
 
+            animator.SetBool("IsFPSMode", !CameraSystem.Instance.IsTPSMode);
+            if (!CameraSystem.Instance.IsTPSMode)
+            {
+                Vector3 cameraForward = Camera.main.transform.forward;
+
+                float aimRight = Vector3.Dot(transform.right, cameraForward);
+                float aimUp = Vector3.Dot(transform.up, cameraForward);
+
+                animator.SetFloat("AimRight", aimRight);
+                animator.SetFloat("AimUp", aimUp);
+            }
+
             Move();
 
             animator.SetFloat("Speed", animationBlend);
