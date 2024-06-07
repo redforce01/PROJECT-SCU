@@ -11,7 +11,7 @@ namespace SCU
         {
             set
             {
-                progressText.text = value.ToString();
+                progressText.text = $"{value * 100.0f:0.0} %"; // "0.0 ~ 100.0" + "%"
                 progressBar.fillAmount = value;
             }
         }

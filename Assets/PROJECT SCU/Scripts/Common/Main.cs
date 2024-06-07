@@ -76,15 +76,9 @@ namespace SCU
                 Destroy(currentScene.gameObject);
             }
 
-            loadingUI.LoadingProgress = 0.2f;
-            yield return null;
-
             // Load Empty Scene 
             var async = SceneManager.LoadSceneAsync(SceneType.Empty.ToString(), LoadSceneMode.Single);
             yield return new WaitUntil(() => async.isDone);
-
-            loadingUI.LoadingProgress = 0.7f;
-            yield return null;
 
             // Create Scene GameObject and add Scene Component
             GameObject sceneGo = new GameObject(typeof(T).Name);
@@ -95,8 +89,7 @@ namespace SCU
             yield return StartCoroutine(currentScene.OnStartScene());
 
             loadingUI.LoadingProgress = 1f;
-
-            yield return new WaitForSeconds(1f);
+            yield return null;
 
             // To do : Hide Loading UI
             UIManager.Hide<LoadingUI>(UIList.LoadingUI);
