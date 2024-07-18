@@ -16,7 +16,7 @@ namespace SCU
                 float sceneLoadProgress = asyncSceneLoad.progress / 0.9f;
                 loadingUI.LoadingProgress = sceneLoadProgress;
 
-                return asyncSceneLoad.isDone;
+                return asyncSceneLoad.isDone;                
             });
         }
 

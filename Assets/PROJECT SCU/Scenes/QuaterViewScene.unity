@@ -442,6 +442,7 @@ MonoBehaviour:
   mainCamera: {fileID: 963194227}
   cameraPivot: {fileID: 404726973}
   quaterViewCamera: {fileID: 264133679}
+  cameraBorderThickness: 0.1
 --- !u!1 &97252245
 GameObject:
   m_ObjectHideFlags: 0

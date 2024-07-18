@@ -14,6 +14,9 @@ namespace SCU
         public Transform cameraPivot;
         public Cinemachine.CinemachineVirtualCamera quaterViewCamera;
 
+
+        public float cameraBorderThickness = 0.2f;
+
         private void Update()
         {
             float rotateDirection = 0f;
@@ -57,6 +60,82 @@ namespace SCU
             if (Input.GetKey(KeyCode.D))
             {
                 cameraPivot.Translate(cameraRight * cameraMoveSpeed * Time.deltaTime, Space.World);
+            }
+
+
+
+            // Mouse Screen Border Check
+            Vector3 mousePosition = Input.mousePosition;
+            Vector3 viewportMousePosition = mainCamera.ScreenToViewportPoint(mousePosition);
+
+            // Left Check
+            if (viewportMousePosition.x < cameraBorderThickness)
+            {
+                // To do : Camera Move To Left
+                cameraPivot.Translate(cameraRight * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+
+                // Top
+                if (viewportMousePosition.y > 1 - cameraBorderThickness)
+                {
+                    // Top Left
+                    cameraPivot.Translate(cameraForward * cameraMoveSpeed * Time.deltaTime, Space.World);
+                }
+                // Bottom
+                else if (viewportMousePosition.y < cameraBorderThickness)
+                {
+                    // Bottom Left
+                    cameraPivot.Translate(cameraForward * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+                }
+            }
+            // Right Check
+            else if (viewportMousePosition.x > 1 - cameraBorderThickness)
+            {
+                // To do : Camera Move To Right
+                cameraPivot.Translate(cameraRight * cameraMoveSpeed * Time.deltaTime, Space.World);
+                // Top
+                if (viewportMousePosition.y > 1 - cameraBorderThickness)
+                {
+                    // Top Left
+                    cameraPivot.Translate(cameraForward * cameraMoveSpeed * Time.deltaTime, Space.World);
+                }
+                // Bottom
+                else if (viewportMousePosition.y < cameraBorderThickness)
+                {
+                    // Bottom Left
+                    cameraPivot.Translate(cameraForward * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+                }
+            }
+            // Top Check
+            else if (viewportMousePosition.y > 1 - cameraBorderThickness)
+            {
+                // To do : Camera Move To Top
+                cameraPivot.Translate(cameraForward * cameraMoveSpeed * Time.deltaTime, Space.World);
+                // Left Check
+                if (viewportMousePosition.x < cameraBorderThickness)
+                {
+                    cameraPivot.Translate(cameraRight * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+                }
+                // Right Check
+                else if (viewportMousePosition.x > 1 - cameraBorderThickness)
+                {
+                    cameraPivot.Translate(cameraRight * cameraMoveSpeed * Time.deltaTime, Space.World);
+                }
+            }
+            // Bottom Check
+            else if (viewportMousePosition.y < cameraBorderThickness)
+            {
+                // To do : Camera Move To Bottom
+                cameraPivot.Translate(cameraForward * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+                // Left Check
+                if (viewportMousePosition.x < cameraBorderThickness)
+                {
+                    cameraPivot.Translate(cameraRight * cameraMoveSpeed * (-1) * Time.deltaTime, Space.World);
+                }
+                // Right Check
+                else if (viewportMousePosition.x > 1 - cameraBorderThickness)
+                {
+                    cameraPivot.Translate(cameraRight * cameraMoveSpeed * Time.deltaTime, Space.World);
+                }
             }
         }
     }
