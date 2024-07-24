@@ -22,6 +22,9 @@ namespace SCU
         public float fireRate = 0.1f;
         public float range = 100f;
 
+        public List<Vector3> recoilShakePattern = new List<Vector3>();
+        private int currentRecoilIndex = 0;
+
         private float lastShootTime = 0f;
 
         public void Shoot()
@@ -45,6 +48,15 @@ namespace SCU
 
                 // 두 오브젝트가 서로 충돌처리가 되지 않게 Unity Physics Engine에게 무시하도록 지시
                 Physics.IgnoreCollision(newBullet.GetComponent<Collider>(), transform.root.GetComponent<Collider>());
+
+                Vector3 velocity = recoilShakePattern[currentRecoilIndex];
+                currentRecoilIndex++;
+                if (currentRecoilIndex >= recoilShakePattern.Count)
+                {
+                    currentRecoilIndex = currentRecoilIndex = 0;
+                }
+
+                CameraSystem.Instance.ShakeCamera(velocity, 0.2f, 1);
             }
         }
     }

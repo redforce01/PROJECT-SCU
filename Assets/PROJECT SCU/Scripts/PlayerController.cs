@@ -97,12 +97,6 @@ namespace SCU
         {
             //Cursor.lockState = CursorLockMode.Locked;
             //Cursor.visible = false;
-
-            // NG : 아래 코드 방식으로 컴포넌트를 찾지말 것.
-            //GameObject.Find("GameDataModel").GetComponent<GameDataModel>().myDummyData.characterMoveSpeed
-
-            // OK : 아래 코드 방식으로 컴포넌트를 찾을 것.
-            moveSpeed = GameDataModel.Singleton.myDummyData.characterMoveSpeed;
         }
 
         private void OnEnable()
@@ -123,8 +117,6 @@ namespace SCU
 
         private void Update()
         {
-            moveSpeed = GameDataModel.Singleton.myDummyData.characterMoveSpeed;
-
             if (Input.GetKeyDown(KeyCode.F))
             {
                 InteractionUI.Instance.DoInteract();
